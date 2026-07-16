@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum ProductStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+model User {
+  id          String              @id @default(cuid())
+  clerkId     String              @unique
+  email       String              @unique
+  name        String?
+  role        Role                @default(CUSTOMER)
+  points      Int                 @default(0)
+  savePayment Boolean             @default(false)
+  tags        String[]
+  createdAt   DateTime            @default(now())
+  orders      Order[]
+  pointsLog   PointsTransaction[]
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  order    Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String
+  price       Decimal
+  images      String[]
+  // true = producto Apple usado (unidad única, se controla con `status`).
+  // false = producto sellado de terceros con stock real (se controla con `quantity`).
+  isUsed      Boolean       @default(true)
+  condition   String? // grado estético: A / B / C, solo aplica si isUsed = true
+  status      ProductStatus @default(AVAILABLE)
+  quantity    Int?
+  // se completa al iniciar un checkout; junto con la constante de expiración
+  // de reserva determina cuándo un producto RESERVED vuelve a estar AVAILABLE.
+  reservedAt  DateTime?
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime      @default(now())
+  events      ProductEvent[]
+  orderItems  OrderItem[]
+}
+
+model Promotion {
+  id         String   @id @default(cuid())
+  title      String
+  image      String
+  link       String?
+  order      Int      @default(0)
+  activeFrom DateTime
+  activeTo   DateTime
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  items        OrderItem[]
+  total        Decimal
+  status       String // pending / paid / cancelled
+  mpPaymentId  String?
+  shippingInfo Json?
+  createdAt    DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  price     Decimal
+  quantity  Int     @default(1)
+}
+
+model ProductEvent {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String?
+  sessionId String?
+  type      String // VIEW / ADD_TO_CART / PURCHASE
+  createdAt DateTime @default(now())
+}
+
+model PointsTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  type      String // EARNED / REDEEMED
+  orderId   String?
+  createdAt DateTime @default(now())
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  createdAt  DateTime @default(now())
+}

@@ -1,0 +1,30 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { ProductForm } from "@/components/admin/product-form";
+import { getCategories } from "@/lib/queries/products";
+import { updateProduct } from "../../actions";
+
+export default async function EditProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [product, categories] = await Promise.all([
+    prisma.product.findUnique({ where: { id } }),
+    getCategories(),
+  ]);
+
+  if (!product) notFound();
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold text-zinc-900">Editar producto</h1>
+      <ProductForm
+        action={updateProduct.bind(null, id)}
+        categories={categories}
+        product={product}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,58 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# Clerk (claves temporales de modo "keyless", solo para desarrollo local)
+.clerk
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# imágenes subidas localmente (TEMPORAL: sustituto de Supabase Storage
+# mientras no haya credenciales reales, ver src/lib/storage.ts)
+/public/uploads/*
+!/public/uploads/**/.gitkeep
+
+# Claude Code: permisos locales del harness, específicos de esta máquina
+.claude/settings.local.json
