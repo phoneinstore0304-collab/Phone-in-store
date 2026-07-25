@@ -23,7 +23,12 @@ enum ProductStatus {
 
 model User {
   id          String              @id @default(cuid())
-  clerkId     String              @unique
+  // Nullable: el admin puede cargar un cliente a mano (carga manual de
+  // clientes/afinidad, brief punto 10) antes de que esa persona se haya
+  // registrado. Cuando esa misma persona inicia sesión de verdad con el
+  // mismo email, getCurrentUser() "reclama" esta fila (le asigna el
+  // clerkId real) en vez de crear un usuario duplicado — ver src/lib/auth.ts.
+  clerkId     String?             @unique
   email       String              @unique
   name        String?
   role        Role                @default(CUSTOMER)

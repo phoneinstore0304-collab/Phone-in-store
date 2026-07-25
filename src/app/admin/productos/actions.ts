@@ -1,14 +1,46 @@
 "use server";
 
+import type { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { uploadImage } from "@/lib/storage";
+import { uploadImages } from "@/lib/storage";
 import { productSchema } from "@/lib/validations/product";
 import { logAdminAction } from "@/lib/audit-log";
 
-export type ProductFormState = { error?: string };
+// Valores tal como vienen del formulario (todo string, para poder
+// reponerlos en los <input> si algo falla). `isUsed` es la excepción
+// porque el checkbox no tiene un valor de texto útil.
+type ProductFormValues = {
+  name: string;
+  slug: string;
+  description: string;
+  price: string;
+  categoryId: string;
+  isUsed: boolean;
+  condition: string;
+  quantity: string;
+};
+
+export type ProductFormState = {
+  error?: string;
+  fieldErrors?: Partial<Record<keyof Omit<ProductFormValues, "isUsed">, string>>;
+  values?: ProductFormValues;
+};
+
+function readRawValues(formData: FormData): ProductFormValues {
+  return {
+    name: String(formData.get("name") ?? ""),
+    slug: String(formData.get("slug") ?? ""),
+    description: String(formData.get("description") ?? ""),
+    price: String(formData.get("price") ?? ""),
+    categoryId: String(formData.get("categoryId") ?? ""),
+    isUsed: formData.get("isUsed") === "on",
+    condition: String(formData.get("condition") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
+  };
+}
 
 function parseProductForm(formData: FormData) {
   return productSchema.safeParse({
@@ -23,12 +55,34 @@ function parseProductForm(formData: FormData) {
   });
 }
 
-async function uploadIfProvided(formData: FormData) {
-  const imageFile = formData.get("image");
-  if (imageFile instanceof File && imageFile.size > 0) {
-    return uploadImage(imageFile, "products");
+// Arma el estado que vuelve al formulario cuando la validación falla: un
+// mensaje por cada campo con error, y los valores tipeados con los campos
+// inválidos vacíos (los válidos se mantienen tal cual los escribió el admin).
+function invalidFormState(error: z.ZodError, formData: FormData): ProductFormState {
+  const fieldErrors: NonNullable<ProductFormState["fieldErrors"]> = {};
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if (typeof field === "string" && !(field in fieldErrors)) {
+      fieldErrors[field as keyof typeof fieldErrors] = issue.message;
+    }
   }
-  return undefined;
+
+  const values = readRawValues(formData);
+  for (const field of Object.keys(fieldErrors)) {
+    if (field !== "isUsed") {
+      values[field as keyof Omit<ProductFormValues, "isUsed">] = "";
+    }
+  }
+
+  return { fieldErrors, values };
+}
+
+async function uploadImagesIfProvided(formData: FormData) {
+  const files = formData
+    .getAll("images")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  if (files.length === 0) return undefined;
+  return uploadImages(files, "products");
 }
 
 export async function createProduct(
@@ -39,14 +93,17 @@ export async function createProduct(
 
   const parsed = parseProductForm(formData);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return invalidFormState(parsed.error, formData);
   }
 
-  let image: string | undefined;
+  let images: string[] | undefined;
   try {
-    image = await uploadIfProvided(formData);
+    images = await uploadImagesIfProvided(formData);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No se pudo subir la imagen" };
+    return {
+      error: error instanceof Error ? error.message : "No se pudo subir la imagen",
+      values: readRawValues(formData),
+    };
   }
 
   const { isUsed, condition, quantity, ...rest } = parsed.data;
@@ -54,7 +111,7 @@ export async function createProduct(
   const product = await prisma.product.create({
     data: {
       ...rest,
-      images: image ? [image] : [],
+      images: images ?? [],
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,
@@ -79,14 +136,17 @@ export async function updateProduct(
 
   const parsed = parseProductForm(formData);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return invalidFormState(parsed.error, formData);
   }
 
-  let image: string | undefined;
+  let images: string[] | undefined;
   try {
-    image = await uploadIfProvided(formData);
+    images = await uploadImagesIfProvided(formData);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No se pudo subir la imagen" };
+    return {
+      error: error instanceof Error ? error.message : "No se pudo subir la imagen",
+      values: readRawValues(formData),
+    };
   }
 
   const { isUsed, condition, quantity, ...rest } = parsed.data;
@@ -95,7 +155,7 @@ export async function updateProduct(
     where: { id },
     data: {
       ...rest,
-      images: image ? [image] : existing.images,
+      images: images ?? existing.images,
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,

@@ -14,17 +14,23 @@ export function CategorySection({
   return (
     <section className="flex flex-col gap-6 px-6 py-10 sm:px-10">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold text-zinc-900">{category.name}</h2>
+        <h2 className="font-display text-xl font-bold tracking-tight text-zinc-900">
+          {category.name}
+        </h2>
         <Link
           href={`/categoria/${category.slug}`}
-          className="text-sm text-zinc-500 hover:text-zinc-900"
+          className="group/link text-sm text-zinc-500 transition-colors duration-200 hover:text-primary"
         >
           Ver todo
+          <span className="inline-block transition-transform duration-200 group-hover/link:translate-x-0.5">
+            {" "}
+            →
+          </span>
         </Link>
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.id} product={product} categoryName={category.name} />
         ))}
       </div>
     </section>

@@ -22,7 +22,9 @@ export default function CartPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-8 px-6 py-10 sm:px-10">
-      <h1 className="text-2xl font-semibold text-zinc-900">Tu carrito</h1>
+      <h1 className="font-display text-2xl font-bold tracking-tight text-zinc-900">
+        Tu carrito
+      </h1>
 
       <div className="flex flex-col divide-y divide-zinc-200">
         {items.map((item) => (
@@ -31,7 +33,9 @@ export default function CartPage() {
       </div>
 
       <div className="flex flex-col items-end gap-4 border-t border-zinc-200 pt-6">
-        <p className="text-lg font-semibold">Total: {formatPrice(cartTotal(items))}</p>
+        <p className="text-lg font-bold">
+          Total: <span className="text-primary">{formatPrice(cartTotal(items))}</span>
+        </p>
         {/* El checkout real (envío + Mercado Pago) se construye en el próximo paso. */}
         <Link href="/checkout" className={buttonVariants({ size: "lg" })}>
           Continuar la compra

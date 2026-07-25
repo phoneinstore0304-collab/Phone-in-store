@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "iPhone in Store",
+  name: "Phone in Store",
   description:
     "Compra y venta de productos Apple usados y tecnología en Argentina.",
   locale: "es-AR",

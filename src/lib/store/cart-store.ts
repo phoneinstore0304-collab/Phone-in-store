@@ -19,6 +19,12 @@ type CartState = {
   removeItem: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
   clear: () => void;
+  // Estado del carrito lateral (drawer, ver CartDrawer). Vive acá mismo por
+  // simplicidad, pero no se persiste (partialize abajo) — no tendría
+  // sentido que el drawer quede "abierto" guardado entre recargas.
+  isOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
 };
 
 export const useCartStore = create<CartState>()(
@@ -53,8 +59,14 @@ export const useCartStore = create<CartState>()(
           ),
         }),
       clear: () => set({ items: [] }),
+      isOpen: false,
+      openCart: () => set({ isOpen: true }),
+      closeCart: () => set({ isOpen: false }),
     }),
-    { name: "iphone-in-store-cart" },
+    {
+      name: "iphone-in-store-cart",
+      partialize: (state) => ({ items: state.items }),
+    },
   ),
 );
 

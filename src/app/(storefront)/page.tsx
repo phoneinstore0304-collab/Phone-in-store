@@ -1,4 +1,6 @@
 import { PromoCarousel } from "@/components/shared/promo-carousel";
+import { Hero } from "@/components/shared/hero";
+import { CategoryPills } from "@/components/product/category-pills";
 import { CategorySection } from "@/components/product/category-section";
 import { getActivePromotions } from "@/lib/queries/promotions";
 import { getCategories, getFeaturedProductsByCategory } from "@/lib/queries/products";
@@ -18,7 +20,9 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <Hero />
       <PromoCarousel promotions={promotions} />
+      <CategoryPills categories={categories} />
       {sections.map(({ category, products }) => (
         <CategorySection key={category.id} category={category} products={products} />
       ))}

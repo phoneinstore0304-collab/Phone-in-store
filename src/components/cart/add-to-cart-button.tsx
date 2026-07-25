@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store/cart-store";
 
@@ -36,7 +37,16 @@ export function AddToCartButton({
 
   return (
     <Button size="lg" className="w-full sm:w-auto" onClick={handleClick}>
-      {justAdded ? "Agregado" : "Agregar al carrito"}
+      {/* key: fuerza a remontar cada vez que cambia el texto, para que la
+      animación de entrada se vea de nuevo en cada click (no solo la
+      primera vez que aparece "Agregado"). */}
+      <span
+        key={justAdded ? "added" : "idle"}
+        className="inline-flex animate-in items-center gap-1.5 fade-in zoom-in-95 duration-200"
+      >
+        {justAdded && <Check className="size-4" />}
+        {justAdded ? "Agregado" : "Agregar al carrito"}
+      </span>
     </Button>
   );
 }

@@ -9,6 +9,7 @@ import { useCartStore, type CartItem } from "@/lib/store/cart-store";
 export function CartItemRow({ item }: { item: CartItem }) {
   const removeItem = useCartStore((state) => state.removeItem);
   const setQuantity = useCartStore((state) => state.setQuantity);
+  const closeCart = useCartStore((state) => state.closeCart);
 
   return (
     <div className="flex items-center gap-4 py-4">
@@ -17,7 +18,11 @@ export function CartItemRow({ item }: { item: CartItem }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-1">
-        <Link href={`/producto/${item.slug}`} className="font-medium hover:underline">
+        <Link
+          href={`/producto/${item.slug}`}
+          onClick={closeCart}
+          className="font-medium hover:underline"
+        >
           {item.name}
         </Link>
         <p className="text-sm text-zinc-500">{formatPrice(item.price)}</p>

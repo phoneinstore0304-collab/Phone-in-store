@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 // escribir a disco).
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
 
 export async function uploadImage(
   file: File,
@@ -19,7 +19,7 @@ export async function uploadImage(
     throw new Error("Formato de imagen no soportado (usar JPG, PNG o WEBP).");
   }
   if (file.size > MAX_SIZE_BYTES) {
-    throw new Error("La imagen no puede pesar más de 5MB.");
+    throw new Error("La imagen no puede pesar más de 8MB.");
   }
 
   const extension = file.type.split("/")[1];
@@ -31,4 +31,15 @@ export async function uploadImage(
   await writeFile(path.join(uploadDir, filename), buffer);
 
   return `/uploads/${folder}/${filename}`;
+}
+
+export async function uploadImages(
+  files: File[],
+  folder: "products" | "promotions",
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    urls.push(await uploadImage(file, folder));
+  }
+  return urls;
 }

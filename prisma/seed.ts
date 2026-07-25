@@ -12,6 +12,12 @@ const categories = [
   { name: "Consolas y gaming", slug: "gaming", order: 3 },
 ] as const;
 
+// Fotos de stock (Unsplash, uso libre) para que el catálogo de prueba no se
+// vea vacío. Son genéricas, no fotos reales de cada unidad — se reemplazan
+// por las que suba el admin desde el panel (paso 6) o por Supabase Storage.
+const stockPhoto = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?q=80&w=1200&auto=format&fit=crop`;
+
 // Productos de prueba para poder construir y probar el storefront (paso 4)
 // antes de tener carga real desde el panel admin (paso 6).
 const sampleProducts = [
@@ -22,7 +28,11 @@ const sampleProducts = [
     description:
       "iPhone 13 usado en excelente estado, batería 88%. Incluye cargador.",
     price: 650000,
-    images: [],
+    images: [
+      stockPhoto("1642227140165-534d29b48f70"),
+      stockPhoto("1510557880182-3d4d3cba35a5"),
+      stockPhoto("1523206489230-c012c64b2b48"),
+    ],
     isUsed: true,
     condition: "A",
   },
@@ -32,7 +42,7 @@ const sampleProducts = [
     slug: "iphone-12-mini-64gb",
     description: "iPhone 12 mini usado, algunas marcas de uso en el borde.",
     price: 480000,
-    images: [],
+    images: [stockPhoto("1647232440941-e256293d25bb")],
     isUsed: true,
     condition: "B",
   },
@@ -42,7 +52,7 @@ const sampleProducts = [
     slug: "macbook-air-m1-13",
     description: "MacBook Air M1 usada, 8GB RAM / 256GB SSD.",
     price: 1100000,
-    images: [],
+    images: [stockPhoto("1504198070170-4ca53bb1c1fa")],
     isUsed: true,
     condition: "A",
   },
@@ -52,9 +62,19 @@ const sampleProducts = [
     slug: "sony-wh-1000xm5",
     description: "Auriculares Sony con cancelación de ruido, sellados.",
     price: 420000,
-    images: [],
+    images: [stockPhoto("1505740420928-5e560c06d30e")],
     isUsed: false,
     quantity: 5,
+  },
+  {
+    categorySlug: "audio",
+    name: "JBL Flip 6",
+    slug: "jbl-flip-6",
+    description: "Parlante Bluetooth JBL Flip 6, resistente al agua (IP67), sellado.",
+    price: 210000,
+    images: [stockPhoto("1608043152269-423dbba4e7e1")],
+    isUsed: false,
+    quantity: 8,
   },
   {
     categorySlug: "gaming",
@@ -62,31 +82,51 @@ const sampleProducts = [
     slug: "playstation-5-slim",
     description: "Consola PlayStation 5 Slim, sellada de fábrica.",
     price: 950000,
-    images: [],
+    images: [stockPhoto("1750797308931-b0d261abb3d5")],
     isUsed: false,
     quantity: 3,
   },
 ];
 
-// Promociones de prueba para el carrusel de la home. Las imágenes son
-// placeholders locales (public/promo-placeholder-*.svg); se reemplazan por
-// las que cargue el admin en el paso 6.
+// Banners reales de las redes de Phone in Store (public/promo/*.jpg).
 const now = new Date();
 const oneYear = 1000 * 60 * 60 * 24 * 365;
 const samplePromotions = [
   {
-    title: "iPhone usados",
-    image: "/promo-placeholder-1.svg",
-    link: "/categoria/iphone-usados",
+    title: "Línea JBL — sumamos nuevos productos",
+    image: "/promo/jbl.jpg",
+    link: "/categoria/audio",
     order: 0,
     activeFrom: new Date(now.getTime() - oneYear),
     activeTo: new Date(now.getTime() + oneYear),
   },
   {
-    title: "Audio y gaming",
-    image: "/promo-placeholder-2.svg",
-    link: "/categoria/gaming",
+    title: "Apple Sale — iPad 11'' Chip M1 256GB",
+    image: "/promo/ipad.jpg",
+    link: "/categoria/apple-usados",
     order: 1,
+    activeFrom: new Date(now.getTime() - oneYear),
+    activeTo: new Date(now.getTime() + oneYear),
+  },
+  {
+    title: "Apple Sale — MacBook Air 13.3'' M1",
+    image: "/promo/macbook.jpg",
+    link: "/categoria/apple-usados",
+    order: 2,
+    activeFrom: new Date(now.getTime() - oneYear),
+    activeTo: new Date(now.getTime() + oneYear),
+  },
+  {
+    title: "Hacemos envíos a todo el país",
+    image: "/promo/envios.jpg",
+    order: 3,
+    activeFrom: new Date(now.getTime() - oneYear),
+    activeTo: new Date(now.getTime() + oneYear),
+  },
+  {
+    title: "Escribinos por WhatsApp",
+    image: "/promo/whatsapp.jpg",
+    order: 4,
     activeFrom: new Date(now.getTime() - oneYear),
     activeTo: new Date(now.getTime() + oneYear),
   },

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { ProductSearch } from "@/components/admin/product-search";
 import { deleteProduct } from "./actions";
 
 export default async function AdminProductsPage() {
@@ -20,6 +21,8 @@ export default async function AdminProductsPage() {
         </Link>
       </div>
 
+      <ProductSearch />
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 text-zinc-500">
@@ -27,6 +30,7 @@ export default async function AdminProductsPage() {
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Categoría</th>
               <th className="px-4 py-3 font-medium">Precio</th>
+              <th className="px-4 py-3 font-medium">Stock</th>
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3" />
             </tr>
@@ -37,6 +41,12 @@ export default async function AdminProductsPage() {
                 <td className="px-4 py-3">{product.name}</td>
                 <td className="px-4 py-3 text-zinc-500">{product.category.name}</td>
                 <td className="px-4 py-3">{formatPrice(product.price.toString())}</td>
+                <td className="px-4 py-3 text-zinc-500">
+                  {/* Los usados son unidad única (no tienen `quantity`, se
+                  controlan con `status`); el stock numérico solo aplica a
+                  los sellados de terceros. */}
+                  {product.isUsed ? "Unidad única" : (product.quantity ?? 0)}
+                </td>
                 <td className="px-4 py-3 text-zinc-500">{product.status}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-4">
@@ -53,7 +63,7 @@ export default async function AdminProductsPage() {
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
                   Todavía no hay productos cargados.
                 </td>
               </tr>
