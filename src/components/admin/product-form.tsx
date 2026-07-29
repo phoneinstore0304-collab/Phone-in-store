@@ -66,7 +66,9 @@ export function ProductForm({
 }: {
   action: (prevState: ProductFormState, formData: FormData) => Promise<ProductFormState>;
   categories: Category[];
-  product?: Product;
+  // price como number, no Decimal: este componente es "use client", y un
+  // Decimal de Prisma no se puede pasar como prop a través de ese límite.
+  product?: Omit<Product, "price"> & { price: number };
 }) {
   const [state, formAction, pending] = useActionState<ProductFormState, FormData>(action, {});
 

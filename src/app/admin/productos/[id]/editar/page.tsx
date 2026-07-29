@@ -23,7 +23,10 @@ export default async function EditProductPage({
       <ProductForm
         action={updateProduct.bind(null, id)}
         categories={categories}
-        product={product}
+        // price es un Decimal de Prisma: no se puede pasar tal cual a un
+        // Client Component (ProductForm es "use client"), hay que
+        // convertirlo a number antes de cruzar ese límite.
+        product={{ ...product, price: Number(product.price) }}
       />
     </div>
   );
