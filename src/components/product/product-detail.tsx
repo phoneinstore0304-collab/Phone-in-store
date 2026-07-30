@@ -4,7 +4,7 @@ import { ProductGallery } from "@/components/product/product-gallery";
 import { StockLine } from "@/components/product/stock-line";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { formatPrice } from "@/lib/format";
-import { getProductBySlug, getVariantSiblings } from "@/lib/queries/products";
+import { getProductBySlug, getVariantGroup } from "@/lib/queries/products";
 
 const statusLabel: Record<string, string> = {
   RESERVED: "Reservado por otro comprador",
@@ -21,7 +21,7 @@ export async function ProductDetail({
   product: NonNullable<Awaited<ReturnType<typeof getProductBySlug>>>;
 }) {
   const available = product.status === "AVAILABLE";
-  const variants = await getVariantSiblings(product);
+  const variantGroup = await getVariantGroup(product);
 
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
@@ -45,32 +45,52 @@ export async function ProductDetail({
 
         {/* Variantes de color: cada círculo es otro producto real (con su
         propia card en el catálogo), así que clickear navega a esa ficha en
-        vez de solo cambiar la imagen acá. El color actual se ve con un
-        anillo alrededor; el resto son links. */}
-        {(variants.length > 0 || product.color) && (
+        vez de solo cambiar la imagen acá.
+        - El orden viene de getVariantGroup (por createdAt, incluye al
+          producto actual) y es siempre el mismo sin importar en qué
+          variante estés parado — así los círculos no cambian de posición
+          al cambiar de color, solo cuál está "seleccionado" (con el
+          anillo + una animación de entrada).
+        - `replace` en vez de push: cambiar de color no apila una entrada
+          nueva en el historial, así "atrás" (o la X del modal) siempre
+          vuelve a donde estabas antes de abrir el producto, no al color
+          anterior que probaste. */}
+        {(variantGroup.length > 0 || product.color) && (
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-zinc-500">
               Color{product.color ? `: ${product.color}` : ""}
             </span>
             <div className="flex flex-wrap gap-2.5">
-              {product.color && (
+              {variantGroup.length > 0 ? (
+                variantGroup.map((variant) =>
+                  variant.id === product.id ? (
+                    <span
+                      key={variant.id}
+                      title={variant.color ?? undefined}
+                      aria-label={variant.color ?? undefined}
+                      className="size-8 animate-in rounded-full zoom-in-90 ring-2 ring-zinc-900 ring-offset-2 duration-200"
+                      style={{ backgroundColor: variant.colorHex ?? "#d4d4d8" }}
+                    />
+                  ) : (
+                    <Link
+                      key={variant.id}
+                      href={`/producto/${variant.slug}`}
+                      replace
+                      title={variant.color ?? "Ver variante"}
+                      aria-label={variant.color ?? "Ver variante"}
+                      className="size-8 rounded-full ring-1 ring-zinc-300 transition-transform hover:scale-110 hover:ring-zinc-500"
+                      style={{ backgroundColor: variant.colorHex ?? "#d4d4d8" }}
+                    />
+                  ),
+                )
+              ) : (
                 <span
-                  title={product.color}
-                  aria-label={product.color}
+                  title={product.color ?? undefined}
+                  aria-label={product.color ?? undefined}
                   className="size-8 rounded-full ring-2 ring-zinc-900 ring-offset-2"
                   style={{ backgroundColor: product.colorHex ?? "#d4d4d8" }}
                 />
               )}
-              {variants.map((variant) => (
-                <Link
-                  key={variant.id}
-                  href={`/producto/${variant.slug}`}
-                  title={variant.color ?? "Ver variante"}
-                  aria-label={variant.color ?? "Ver variante"}
-                  className="size-8 rounded-full ring-1 ring-zinc-300 transition-transform hover:scale-110 hover:ring-zinc-500"
-                  style={{ backgroundColor: variant.colorHex ?? "#d4d4d8" }}
-                />
-              ))}
             </div>
           </div>
         )}
