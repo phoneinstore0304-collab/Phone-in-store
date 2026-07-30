@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      // Supabase Storage (fotos subidas desde el admin, ver src/lib/storage.ts).
+      {
+        protocol: "https",
+        hostname: "invmxdutrmeokialcojv.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
     // Desde Next 15, el optimizador de imágenes manda Content-Disposition:
     // attachment por defecto (pensado para cuando dangerouslyAllowSVG está

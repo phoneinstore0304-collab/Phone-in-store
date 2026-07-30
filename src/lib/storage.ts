@@ -1,12 +1,14 @@
-import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
-// TEMPORAL: mientras no exista el proyecto de Supabase, las imágenes se
-// guardan en el filesystem local (public/uploads). Cuando haya credenciales
-// reales de Supabase Storage, esta es la única función que hay que cambiar
-// (subir con el cliente de Supabase y devolver la URL pública en vez de
-// escribir a disco).
+// Supabase Storage: el filesystem de Vercel es de solo lectura en producción
+// (salvo /tmp, que tampoco persiste entre requests), así que las imágenes no
+// se pueden guardar a disco como en local. Bucket "uploads", público, creado
+// una sola vez con supabase.storage.createBucket().
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!,
+);
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
@@ -23,14 +25,15 @@ export async function uploadImage(
   }
 
   const extension = file.type.split("/")[1];
-  const filename = `${randomUUID()}.${extension}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-
-  await mkdir(uploadDir, { recursive: true });
+  const filename = `${folder}/${randomUUID()}.${extension}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
 
-  return `/uploads/${folder}/${filename}`;
+  const { error } = await supabase.storage.from("uploads").upload(filename, buffer, {
+    contentType: file.type,
+  });
+  if (error) throw new Error(`No se pudo subir la imagen: ${error.message}`);
+
+  return supabase.storage.from("uploads").getPublicUrl(filename).data.publicUrl;
 }
 
 export async function uploadImages(
