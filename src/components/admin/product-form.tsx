@@ -6,15 +6,16 @@ import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { uploadImageDirect } from "@/lib/upload-client";
 import type { Category, Product } from "@/generated/prisma/client";
 import type { ProductFormState } from "@/app/admin/productos/actions";
 
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-// Sacar una foto (existente o recién elegida): la miniatura entera es el
-// botón — al pasar el mouse se oscurece y aparece una cruz encima, y con eso
-// ya queda claro que un click ahí la saca (sin un botón chiquito aparte).
+// Sacar una foto (existente o ya subida): la miniatura entera es el botón —
+// al pasar el mouse se oscurece y aparece una cruz encima, y con eso ya
+// queda claro que un click ahí la saca (sin un botón chiquito aparte).
 function ImageThumb({ src, onRemove }: { src: string; onRemove: () => void }) {
   return (
     <button
@@ -32,40 +33,107 @@ function ImageThumb({ src, onRemove }: { src: string; onRemove: () => void }) {
   );
 }
 
+type UploadEntry = {
+  id: string;
+  previewUrl: string;
+  status: "uploading" | "done" | "error";
+  url?: string;
+  errorMessage?: string;
+};
+
+function UploadThumb({ entry, onRemove }: { entry: UploadEntry; onRemove: () => void }) {
+  if (entry.status === "uploading") {
+    return (
+      <div className="relative size-16 shrink-0 animate-in zoom-in-95 overflow-hidden rounded-lg border border-zinc-200 duration-150">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={entry.previewUrl} alt="" className="size-16 object-cover opacity-50" />
+        <span className="absolute inset-0 flex items-center justify-center bg-zinc-900/30">
+          <span className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+        </span>
+      </div>
+    );
+  }
+
+  if (entry.status === "error") {
+    return (
+      <button
+        type="button"
+        onClick={onRemove}
+        title={entry.errorMessage}
+        aria-label={`Sacar (${entry.errorMessage})`}
+        className="flex size-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-red-300 bg-red-50 p-1 text-center text-[9px] leading-tight text-red-500 transition-transform hover:scale-105 active:scale-95"
+      >
+        <X className="size-4" />
+        Error
+      </button>
+    );
+  }
+
+  return <ImageThumb src={entry.previewUrl} onRemove={onRemove} />;
+}
+
 // Muestra las fotos que el producto ya tiene (se pueden sacar una por una
-// con la ×) y permite agregar más sin perder las que quedaron — el botón de
-// "+" abre el selector de archivos y cada foto nueva se suma a la lista, no
-// la reemplaza. Lo que queda de "existentes" viaja en inputs ocultos
-// (name="keepImages"), y los archivos nuevos en el <input type="file"> de
-// siempre — el servidor combina ambos (ver readKeptImages en actions.ts).
-function ImagePicker({ existingImages }: { existingImages: string[] }) {
+// con la ×) y permite agregar más sin perder las que quedaron. Cada foto se
+// sube directo del navegador a Supabase Storage apenas se elige (no viaja
+// por el servidor: Vercel corta cualquier request de más de 4.5MB, y una
+// foto de celular pasa eso fácil — ver storage.ts). Mientras sube se ve un
+// spinner; el botón "Guardar" queda deshabilitado hasta que termine.
+function ImagePicker({
+  existingImages,
+  folder,
+  onUploadingChange,
+}: {
+  existingImages: string[];
+  folder: "products" | "promotions";
+  onUploadingChange?: (uploading: boolean) => void;
+}) {
   const [keptImages, setKeptImages] = useState(existingImages);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploads, setUploads] = useState<UploadEntry[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isUploading = uploads.some((entry) => entry.status === "uploading");
   useEffect(() => {
-    const urls = newFiles.map((file) => URL.createObjectURL(file));
-    setPreviewUrls(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [newFiles]);
+    onUploadingChange?.(isUploading);
+  }, [isUploading, onUploadingChange]);
 
-  // El <input type="file"> real tiene que reflejar `newFiles` para que el
-  // FormData del <form> mande justo lo que quedó después de sacar alguna
-  // con la × (los <input type="file"> no aceptan asignarles `value`, así
-  // que se reconstruye su FileList con DataTransfer).
-  useEffect(() => {
-    if (!inputRef.current) return;
-    const dataTransfer = new DataTransfer();
-    newFiles.forEach((file) => dataTransfer.items.add(file));
-    inputRef.current.files = dataTransfer.files;
-  }, [newFiles]);
+  function handleFiles(fileList: FileList | null) {
+    for (const file of Array.from(fileList ?? [])) {
+      const id = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(file);
+      setUploads((prev) => [...prev, { id, previewUrl, status: "uploading" }]);
+
+      uploadImageDirect(file, folder)
+        .then((url) => {
+          setUploads((prev) =>
+            prev.map((entry) => (entry.id === id ? { ...entry, status: "done", url } : entry)),
+          );
+        })
+        .catch((error: unknown) => {
+          setUploads((prev) =>
+            prev.map((entry) =>
+              entry.id === id
+                ? {
+                    ...entry,
+                    status: "error",
+                    errorMessage: error instanceof Error ? error.message : "No se pudo subir",
+                  }
+                : entry,
+            ),
+          );
+        });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-2">
       {keptImages.map((src) => (
         <input key={src} type="hidden" name="keepImages" value={src} />
       ))}
+      {uploads
+        .filter((entry) => entry.status === "done" && entry.url)
+        .map((entry) => (
+          <input key={entry.id} type="hidden" name="newImages" value={entry.url} />
+        ))}
 
       <div className="flex flex-wrap gap-2">
         {keptImages.map((src) => (
@@ -75,11 +143,11 @@ function ImagePicker({ existingImages }: { existingImages: string[] }) {
             onRemove={() => setKeptImages((prev) => prev.filter((url) => url !== src))}
           />
         ))}
-        {previewUrls.map((src, index) => (
-          <ImageThumb
-            key={src}
-            src={src}
-            onRemove={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
+        {uploads.map((entry) => (
+          <UploadThumb
+            key={entry.id}
+            entry={entry}
+            onRemove={() => setUploads((prev) => prev.filter((u) => u.id !== entry.id))}
           />
         ))}
         <button
@@ -95,14 +163,15 @@ function ImagePicker({ existingImages }: { existingImages: string[] }) {
       <input
         ref={inputRef}
         id="images"
-        name="images"
         type="file"
         multiple
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={(event) => {
-          const selected = Array.from(event.target.files ?? []);
-          if (selected.length > 0) setNewFiles((prev) => [...prev, ...selected]);
+          handleFiles(event.target.files);
+          // Sin esto, elegir el mismo archivo dos veces seguidas (ej: sacarlo
+          // y volver a agregarlo) no dispara "onChange" la segunda vez.
+          event.target.value = "";
         }}
       />
     </div>
@@ -121,6 +190,7 @@ export function ProductForm({
   product?: Omit<Product, "price"> & { price: number };
 }) {
   const [state, formAction, pending] = useActionState<ProductFormState, FormData>(action, {});
+  const [imagesUploading, setImagesUploading] = useState(false);
 
   // El navegador limpia los <input> del formulario después de cada submit
   // (comportamiento nativo de <form>, incluso cuando la acción del servidor
@@ -269,13 +339,23 @@ export function ProductForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="images">Fotos</Label>
-        <ImagePicker existingImages={product?.images ?? []} />
+        <ImagePicker
+          existingImages={product?.images ?? []}
+          folder="products"
+          onUploadingChange={setImagesUploading}
+        />
       </div>
 
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
 
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? "Guardando..." : product ? "Guardar cambios" : "Crear producto"}
+      <Button type="submit" disabled={pending || imagesUploading} className="w-fit">
+        {imagesUploading
+          ? "Subiendo fotos..."
+          : pending
+            ? "Guardando..."
+            : product
+              ? "Guardar cambios"
+              : "Crear producto"}
       </Button>
     </form>
   );

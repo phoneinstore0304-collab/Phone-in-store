@@ -10,39 +10,24 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY!,
 );
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
-
-export async function uploadImage(
-  file: File,
+// El archivo NO se sube acá (Server Action / API route de Vercel): las
+// funciones serverless de Vercel cortan cualquier request de más de 4.5MB
+// ANTES de que nuestro código la vea (esto es un límite del gateway, no de
+// Next.js — el bodySizeLimit de next.config.ts no lo puede levantar). Una
+// foto sacada con el celular pasa ese límite fácil. La solución: el server
+// solo genera una URL firmada de subida, y el navegador sube el archivo
+// directo a Supabase — el archivo nunca pasa por Vercel.
+export async function createSignedUploadUrl(
   folder: "products" | "promotions",
-): Promise<string> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error("Formato de imagen no soportado (usar JPG, PNG o WEBP).");
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    throw new Error("La imagen no puede pesar más de 8MB.");
-  }
+  extension: string,
+) {
+  const path = `${folder}/${randomUUID()}.${extension}`;
+  const { data, error } = await supabase.storage.from("uploads").createSignedUploadUrl(path);
+  if (error) throw new Error(`No se pudo preparar la subida: ${error.message}`);
 
-  const extension = file.type.split("/")[1];
-  const filename = `${folder}/${randomUUID()}.${extension}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  const { error } = await supabase.storage.from("uploads").upload(filename, buffer, {
-    contentType: file.type,
-  });
-  if (error) throw new Error(`No se pudo subir la imagen: ${error.message}`);
-
-  return supabase.storage.from("uploads").getPublicUrl(filename).data.publicUrl;
-}
-
-export async function uploadImages(
-  files: File[],
-  folder: "products" | "promotions",
-): Promise<string[]> {
-  const urls: string[] = [];
-  for (const file of files) {
-    urls.push(await uploadImage(file, folder));
-  }
-  return urls;
+  return {
+    path: data.path,
+    token: data.token,
+    publicUrl: supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl,
+  };
 }

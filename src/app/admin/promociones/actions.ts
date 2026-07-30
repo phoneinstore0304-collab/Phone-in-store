@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { uploadImage } from "@/lib/storage";
 import { promotionSchema } from "@/lib/validations/promotion";
 import { logAdminAction } from "@/lib/audit-log";
 
@@ -80,19 +79,13 @@ export async function createPromotion(
     return invalidFormState(parsed.error, formData);
   }
 
-  const imageFile = formData.get("image");
-  if (!(imageFile instanceof File) || imageFile.size === 0) {
+  // La imagen ya se subió a Supabase Storage directo desde el navegador
+  // (ver ImagePicker en promotion-form.tsx — Vercel corta cualquier request
+  // de más de 4.5MB, así que el archivo nunca viaja hasta acá). Este campo
+  // solo trae la URL final.
+  const image = String(formData.get("image") ?? "");
+  if (!image) {
     return { error: "La imagen es obligatoria", values: readRawValues(formData) };
-  }
-
-  let image: string;
-  try {
-    image = await uploadImage(imageFile, "promotions");
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "No se pudo subir la imagen",
-      values: readRawValues(formData),
-    };
   }
 
   const promotion = await prisma.promotion.create({ data: { ...parsed.data, image } });
@@ -118,18 +111,8 @@ export async function updatePromotion(
     return invalidFormState(parsed.error, formData);
   }
 
-  const imageFile = formData.get("image");
-  let image = existing.image;
-  if (imageFile instanceof File && imageFile.size > 0) {
-    try {
-      image = await uploadImage(imageFile, "promotions");
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : "No se pudo subir la imagen",
-        values: readRawValues(formData),
-      };
-    }
-  }
+  const uploadedImage = String(formData.get("image") ?? "");
+  const image = uploadedImage || existing.image;
 
   await prisma.promotion.update({ where: { id }, data: { ...parsed.data, image } });
 

@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { uploadImages } from "@/lib/storage";
 import { productSchema } from "@/lib/validations/product";
 import { logAdminAction } from "@/lib/audit-log";
 
@@ -77,19 +76,13 @@ function invalidFormState(error: z.ZodError, formData: FormData): ProductFormSta
   return { fieldErrors, values };
 }
 
-async function uploadImagesIfProvided(formData: FormData) {
-  const files = formData
-    .getAll("images")
-    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
-  if (files.length === 0) return [];
-  return uploadImages(files, "products");
-}
-
-// Fotos existentes que el admin dejó (no sacó con la X) — ver ImagePicker en
-// product-form.tsx. Lo que llega acá + las fotos nuevas subidas es el array
-// final de `images`, en vez de reemplazarlas todas como antes.
-function readKeptImages(formData: FormData) {
-  return formData.getAll("keepImages").map(String);
+// Las fotos ya se subieron a Supabase Storage directo desde el navegador
+// (ver ImagePicker en product-form.tsx — Vercel corta cualquier request de
+// más de 4.5MB, así que el archivo nunca viaja hasta acá). Estos campos
+// solo traen las URLs: "keepImages" son las que el admin no sacó, "newImages"
+// las recién subidas. El array final de `images` es la unión de las dos.
+function readImageUrls(formData: FormData, field: "keepImages" | "newImages") {
+  return formData.getAll(field).map(String).filter(Boolean);
 }
 
 export async function createProduct(
@@ -103,22 +96,12 @@ export async function createProduct(
     return invalidFormState(parsed.error, formData);
   }
 
-  let newImages: string[];
-  try {
-    newImages = await uploadImagesIfProvided(formData);
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "No se pudo subir la imagen",
-      values: readRawValues(formData),
-    };
-  }
-
   const { isUsed, condition, quantity, ...rest } = parsed.data;
 
   const product = await prisma.product.create({
     data: {
       ...rest,
-      images: [...readKeptImages(formData), ...newImages],
+      images: [...readImageUrls(formData, "keepImages"), ...readImageUrls(formData, "newImages")],
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,
@@ -146,23 +129,13 @@ export async function updateProduct(
     return invalidFormState(parsed.error, formData);
   }
 
-  let newImages: string[];
-  try {
-    newImages = await uploadImagesIfProvided(formData);
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "No se pudo subir la imagen",
-      values: readRawValues(formData),
-    };
-  }
-
   const { isUsed, condition, quantity, ...rest } = parsed.data;
 
   await prisma.product.update({
     where: { id },
     data: {
       ...rest,
-      images: [...readKeptImages(formData), ...newImages],
+      images: [...readImageUrls(formData, "keepImages"), ...readImageUrls(formData, "newImages")],
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,

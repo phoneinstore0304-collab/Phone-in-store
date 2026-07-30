@@ -22,16 +22,11 @@ const nextConfig: NextConfig = {
     // servimos SVGs remotos, así que "inline" es seguro acá.
     contentDispositionType: "inline",
   },
-  // Next.js limita el body de un Server Action a 1MB por defecto. Los
-  // formularios de admin (productos/promociones) suben fotos vía Server
-  // Action y ya validan hasta 5MB por imagen en src/lib/storage.ts — sin
-  // este límite más alto, cualquier foto de celular normal rebota antes de
-  // llegar a esa validación. 20mb cubre varias fotos de producto a la vez.
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "20mb",
-    },
-  },
+  // Las fotos ya no viajan por Server Actions (van directo del navegador a
+  // Supabase Storage, ver src/lib/upload-client.ts — Vercel corta cualquier
+  // request de más de 4.5MB antes de que llegue a nuestro código, así que
+  // subirlas por acá nunca iba a ser confiable). Los formularios ahora solo
+  // mandan texto/URLs, el límite por defecto de Next alcanza de sobra.
 };
 
 export default nextConfig;
