@@ -6,6 +6,8 @@ import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { VariantLinker } from "@/components/admin/variant-linker";
+import { ColorPicker } from "@/components/admin/color-picker";
 import { uploadImageDirect } from "@/lib/upload-client";
 import type { Category, Product } from "@/generated/prisma/client";
 import type { ProductFormState } from "@/app/admin/productos/actions";
@@ -182,15 +184,27 @@ export function ProductForm({
   action,
   categories,
   product,
+  variants,
 }: {
   action: (prevState: ProductFormState, formData: FormData) => Promise<ProductFormState>;
   categories: Category[];
   // price como number, no Decimal: este componente es "use client", y un
   // Decimal de Prisma no se puede pasar como prop a través de ese límite.
   product?: Omit<Product, "price"> & { price: number };
+  // Otros colores del mismo producto (solo tiene sentido al editar, un
+  // producto nuevo todavía no tiene id para vincular nada).
+  variants?: {
+    id: string;
+    name: string;
+    slug: string;
+    color: string | null;
+    colorHex: string | null;
+    images: string[];
+  }[];
 }) {
   const [state, formAction, pending] = useActionState<ProductFormState, FormData>(action, {});
   const [imagesUploading, setImagesUploading] = useState(false);
+  const [colorHex, setColorHex] = useState(product?.colorHex ?? "");
 
   // El navegador limpia los <input> del formulario después de cada submit
   // (comportamiento nativo de <form>, incluso cuando la acción del servidor
@@ -336,6 +350,36 @@ export function ProductForm({
           )}
         </div>
       </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="color">Color (para variantes, ej: &quot;Negro&quot;)</Label>
+        <Input
+          id="color"
+          name="color"
+          defaultValue={values?.color ?? product?.color ?? undefined}
+          placeholder="Opcional"
+          aria-invalid={Boolean(fieldErrors.color)}
+        />
+        {fieldErrors.color && <p className="text-xs text-red-500">{fieldErrors.color}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Color exacto (para el círculo)</Label>
+        <input type="hidden" name="colorHex" value={colorHex} />
+        <ColorPicker value={colorHex} onChange={setColorHex} imageUrl={product?.images[0]} />
+        {fieldErrors.colorHex && <p className="text-xs text-red-500">{fieldErrors.colorHex}</p>}
+      </div>
+
+      {product && (
+        <div className="flex flex-col gap-1.5">
+          <Label>Variantes de color</Label>
+          <p className="text-xs text-zinc-500">
+            Otros productos que se muestran como botón de color acá y en el
+            catálogo aparecen como cards separadas.
+          </p>
+          <VariantLinker productId={product.id} variants={variants ?? []} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="images">Fotos</Label>

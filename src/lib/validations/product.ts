@@ -17,6 +17,15 @@ export const productSchema = z
     isUsed: z.boolean(),
     condition: z.enum(["A", "B", "C"]).optional(),
     quantity: z.coerce.number().int().nonnegative().optional(),
+    // Nombre del color para el botón de variante en la ficha de producto
+    // (ej: "Negro") — no confundir con `condition`, que es el grado estético.
+    color: z.string().trim().optional(),
+    colorHex: z
+      .string()
+      .trim()
+      .regex(/^#[0-9a-fA-F]{6}$/, "Tiene que ser un color hexadecimal (ej: #1a1a1a)")
+      .optional()
+      .or(z.literal("")),
   })
   .refine((data) => data.isUsed || data.quantity !== undefined, {
     message: "Los productos sellados necesitan una cantidad en stock",

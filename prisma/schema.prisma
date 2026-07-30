@@ -69,6 +69,16 @@ model Product {
   createdAt   DateTime      @default(now())
   events      ProductEvent[]
   orderItems  OrderItem[]
+  // Variantes de color: productos separados (cada uno con su propia card en
+  // el catálogo) que comparten este mismo id arbitrario. `color` es el
+  // nombre (ej: "Negro"), `colorHex` es el valor real para pintar el
+  // círculo (ej: "#1a1a1a") — se puede tipear a mano o tomar con el
+  // selector de "tintero" sobre la primera foto del producto.
+  color         String?
+  colorHex      String?
+  variantGroupId String?
+
+  @@index([variantGroupId])
 }
 
 model Promotion {

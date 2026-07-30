@@ -1,6 +1,7 @@
 "use server";
 
 import type { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +21,8 @@ type ProductFormValues = {
   isUsed: boolean;
   condition: string;
   quantity: string;
+  color: string;
+  colorHex: string;
 };
 
 export type ProductFormState = {
@@ -38,6 +41,8 @@ function readRawValues(formData: FormData): ProductFormValues {
     isUsed: formData.get("isUsed") === "on",
     condition: String(formData.get("condition") ?? ""),
     quantity: String(formData.get("quantity") ?? ""),
+    color: String(formData.get("color") ?? ""),
+    colorHex: String(formData.get("colorHex") ?? ""),
   };
 }
 
@@ -51,6 +56,8 @@ function parseProductForm(formData: FormData) {
     isUsed: formData.get("isUsed") === "on",
     condition: formData.get("condition") || undefined,
     quantity: formData.get("quantity") || undefined,
+    color: formData.get("color") || undefined,
+    colorHex: formData.get("colorHex") || undefined,
   });
 }
 
@@ -153,5 +160,50 @@ export async function deleteProduct(id: string) {
   await prisma.product.delete({ where: { id } });
   await logAdminAction(admin.id, "DELETE", "Product", id);
   revalidatePath("/admin/productos");
+  revalidatePath("/");
+}
+
+// Vincula otro producto ya existente como variante de color de éste. Si
+// `product` todavía no tiene grupo, se le crea uno nuevo (randomUUID); si ya
+// tiene, `other` se suma a ese mismo grupo — así toda la cadena de
+// variantes termina compartiendo un solo variantGroupId.
+export async function linkVariant(productId: string, otherProductId: string) {
+  const admin = await requireAdmin();
+  if (productId === otherProductId) return;
+
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) return;
+
+  const groupId = product.variantGroupId ?? randomUUID();
+
+  await prisma.$transaction([
+    prisma.product.update({ where: { id: productId }, data: { variantGroupId: groupId } }),
+    prisma.product.update({ where: { id: otherProductId }, data: { variantGroupId: groupId } }),
+  ]);
+
+  await logAdminAction(admin.id, "LINK_VARIANT", "Product", otherProductId);
+  revalidatePath(`/admin/productos/${productId}/editar`);
+  revalidatePath("/");
+}
+
+// Saca a un producto de su grupo de variantes (no lo borra, solo lo
+// desvincula). El resto del grupo sigue intacto.
+export async function unlinkVariant(productId: string) {
+  const admin = await requireAdmin();
+  await prisma.product.update({ where: { id: productId }, data: { variantGroupId: null } });
+  await logAdminAction(admin.id, "UNLINK_VARIANT", "Product", productId);
+  revalidatePath("/admin/productos");
+  revalidatePath("/");
+}
+
+// Cambia el colorHex de una variante directo desde la lista de "Variantes
+// de color" (sin tener que abrir su propia edición) — usado por el tintero
+// en VariantLinker.
+export async function updateVariantColor(productId: string, colorHex: string) {
+  const admin = await requireAdmin();
+  if (colorHex && !/^#[0-9a-fA-F]{6}$/.test(colorHex)) return;
+
+  await prisma.product.update({ where: { id: productId }, data: { colorHex: colorHex || null } });
+  await logAdminAction(admin.id, "UPDATE", "Product", productId);
   revalidatePath("/");
 }

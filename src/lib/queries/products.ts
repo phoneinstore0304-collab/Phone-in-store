@@ -49,3 +49,15 @@ export function getProductBySlug(slug: string) {
     include: { category: true },
   });
 }
+
+// Otros colores del mismo producto (mismo variantGroupId), sin incluirse a
+// sí mismo — para los botones de color en la ficha de producto. Si el
+// producto no tiene grupo, no hay nada que buscar.
+export function getVariantSiblings(product: { id: string; variantGroupId: string | null }) {
+  if (!product.variantGroupId) return Promise.resolve([]);
+  return prisma.product.findMany({
+    where: { variantGroupId: product.variantGroupId, id: { not: product.id } },
+    select: { id: true, name: true, slug: true, color: true, colorHex: true, images: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
