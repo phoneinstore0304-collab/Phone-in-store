@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
+import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -11,50 +12,99 @@ import type { ProductFormState } from "@/app/admin/productos/actions";
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-// Miniaturas de las fotos elegidas en el <input type="file">, para que el
-// admin vea qué va a subir antes de guardar. Si no se elige ninguna foto
-// nueva, muestra las que el producto ya tiene (solo informativo: al editar,
-// subir fotos nuevas reemplaza a todas las anteriores).
+// Sacar una foto (existente o recién elegida): la miniatura entera es el
+// botón — al pasar el mouse se oscurece y aparece una cruz encima, y con eso
+// ya queda claro que un click ahí la saca (sin un botón chiquito aparte).
+function ImageThumb({ src, onRemove }: { src: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      aria-label="Sacar foto"
+      className="group relative size-16 shrink-0 animate-in zoom-in-95 overflow-hidden rounded-lg border border-zinc-200 duration-150"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="size-16 object-cover" />
+      <span className="absolute inset-0 flex items-center justify-center bg-zinc-900/0 opacity-0 transition-all duration-150 group-hover:bg-zinc-900/60 group-hover:opacity-100">
+        <X className="size-6 scale-75 text-white transition-transform duration-150 group-hover:scale-100" />
+      </span>
+    </button>
+  );
+}
+
+// Muestra las fotos que el producto ya tiene (se pueden sacar una por una
+// con la ×) y permite agregar más sin perder las que quedaron — el botón de
+// "+" abre el selector de archivos y cada foto nueva se suma a la lista, no
+// la reemplaza. Lo que queda de "existentes" viaja en inputs ocultos
+// (name="keepImages"), y los archivos nuevos en el <input type="file"> de
+// siempre — el servidor combina ambos (ver readKeptImages en actions.ts).
 function ImagePicker({ existingImages }: { existingImages: string[] }) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [keptImages, setKeptImages] = useState(existingImages);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const urls = files.map((file) => URL.createObjectURL(file));
+    const urls = newFiles.map((file) => URL.createObjectURL(file));
     setPreviewUrls(urls);
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [files]);
+  }, [newFiles]);
 
-  const thumbnails = files.length > 0 ? previewUrls : existingImages;
+  // El <input type="file"> real tiene que reflejar `newFiles` para que el
+  // FormData del <form> mande justo lo que quedó después de sacar alguna
+  // con la × (los <input type="file"> no aceptan asignarles `value`, así
+  // que se reconstruye su FileList con DataTransfer).
+  useEffect(() => {
+    if (!inputRef.current) return;
+    const dataTransfer = new DataTransfer();
+    newFiles.forEach((file) => dataTransfer.items.add(file));
+    inputRef.current.files = dataTransfer.files;
+  }, [newFiles]);
 
   return (
     <div className="flex flex-col gap-2">
+      {keptImages.map((src) => (
+        <input key={src} type="hidden" name="keepImages" value={src} />
+      ))}
+
+      <div className="flex flex-wrap gap-2">
+        {keptImages.map((src) => (
+          <ImageThumb
+            key={src}
+            src={src}
+            onRemove={() => setKeptImages((prev) => prev.filter((url) => url !== src))}
+          />
+        ))}
+        {previewUrls.map((src, index) => (
+          <ImageThumb
+            key={src}
+            src={src}
+            onRemove={() => setNewFiles((prev) => prev.filter((_, i) => i !== index))}
+          />
+        ))}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          aria-label="Agregar fotos"
+          className="flex size-16 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition-transform duration-150 hover:scale-105 hover:border-zinc-400 hover:text-zinc-600 active:scale-95"
+        >
+          <Plus className="size-5" />
+        </button>
+      </div>
+
       <input
+        ref={inputRef}
         id="images"
         name="images"
         type="file"
         multiple
         accept="image/jpeg,image/png,image/webp"
-        onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+        className="hidden"
+        onChange={(event) => {
+          const selected = Array.from(event.target.files ?? []);
+          if (selected.length > 0) setNewFiles((prev) => [...prev, ...selected]);
+        }}
       />
-      {files.length === 0 && existingImages.length > 0 && (
-        <p className="text-xs text-zinc-500">
-          Fotos actuales — subí fotos nuevas para reemplazarlas todas.
-        </p>
-      )}
-      {thumbnails.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {thumbnails.map((src, index) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={src + index}
-              src={src}
-              alt=""
-              className="size-16 rounded-lg border border-zinc-200 object-cover"
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -218,9 +268,7 @@ export function ProductForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="images">
-          Fotos {product ? "(dejar vacío para mantener las actuales)" : ""}
-        </Label>
+        <Label htmlFor="images">Fotos</Label>
         <ImagePicker existingImages={product?.images ?? []} />
       </div>
 

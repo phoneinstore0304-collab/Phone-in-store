@@ -81,8 +81,15 @@ async function uploadImagesIfProvided(formData: FormData) {
   const files = formData
     .getAll("images")
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
-  if (files.length === 0) return undefined;
+  if (files.length === 0) return [];
   return uploadImages(files, "products");
+}
+
+// Fotos existentes que el admin dejó (no sacó con la X) — ver ImagePicker en
+// product-form.tsx. Lo que llega acá + las fotos nuevas subidas es el array
+// final de `images`, en vez de reemplazarlas todas como antes.
+function readKeptImages(formData: FormData) {
+  return formData.getAll("keepImages").map(String);
 }
 
 export async function createProduct(
@@ -96,9 +103,9 @@ export async function createProduct(
     return invalidFormState(parsed.error, formData);
   }
 
-  let images: string[] | undefined;
+  let newImages: string[];
   try {
-    images = await uploadImagesIfProvided(formData);
+    newImages = await uploadImagesIfProvided(formData);
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "No se pudo subir la imagen",
@@ -111,7 +118,7 @@ export async function createProduct(
   const product = await prisma.product.create({
     data: {
       ...rest,
-      images: images ?? [],
+      images: [...readKeptImages(formData), ...newImages],
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,
@@ -139,9 +146,9 @@ export async function updateProduct(
     return invalidFormState(parsed.error, formData);
   }
 
-  let images: string[] | undefined;
+  let newImages: string[];
   try {
-    images = await uploadImagesIfProvided(formData);
+    newImages = await uploadImagesIfProvided(formData);
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "No se pudo subir la imagen",
@@ -155,7 +162,7 @@ export async function updateProduct(
     where: { id },
     data: {
       ...rest,
-      images: images ?? existing.images,
+      images: [...readKeptImages(formData), ...newImages],
       isUsed,
       condition: isUsed ? condition : null,
       quantity: isUsed ? null : quantity,
