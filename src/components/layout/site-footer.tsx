@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { siteConfig } from "@/config/site";
 
 // Ícono de WhatsApp: no es un ícono genérico de lucide-react (esa librería
@@ -41,37 +40,10 @@ export function SiteFooter() {
             </span>
           </div>
           <p className="mt-3.5 max-w-[280px] text-[13px] leading-relaxed text-white/55">
-            Local de tecnología con más de 8 años en el barrio. Productos
+            Todo en tecnología desde el año 2015. Productos
             originales, garantía directa y ahora también compra online.
           </p>
         </div>
-
-        {/* Ofertas/Garantías todavía no tienen página propia — quedan como
-        link muerto ("#") a propósito, calcado del mockup, hasta que se
-        construyan. */}
-        <div>
-          <h4 className="mb-4 text-[12px] font-bold tracking-[0.1em] text-white/45 uppercase">
-            Tienda
-          </h4>
-          <ul className="flex flex-col gap-2.5 text-[13px] text-white/75">
-            <li>
-              <Link href="/#catalogo" className="hover:text-white">
-                Catálogo
-              </Link>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                Ofertas
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:text-white">
-                Garantías
-              </a>
-            </li>
-          </ul>
-        </div>
-
         {/* Dirección y horario: placeholder calcado del mockup (a pedido —
         se reemplaza por los datos reales más adelante). El WhatsApp sí es
         el real, ya usado en los banners de Instagram. */}
@@ -82,17 +54,28 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-2.5 text-[13px] text-white/75">
             <li>
               <a
-                href="https://wa.me/5491160060533"
+                href="https://wa.me/5491131368678"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 font-bold text-primary"
               >
                 <WhatsAppIcon className="size-3.5" />
-                11 6006-0533
+                11 3136-8678
               </a>
             </li>
-            <li>Av. Siempre Viva 1234, CABA</li>
-            <li>Lun a Sáb · 10 a 19hs</li>
+            <li>
+              <a
+                href="https://wa.me/5491153381052"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 font-bold text-primary"
+              >
+                <WhatsAppIcon className="size-3.5" />
+                11 5338-1052
+              </a>
+            </li>
+            <li>Av. Alvear 182, Martinez Bs. As.</li>
+            <li>Lun a Sáb · 10 a 12:30hs - 15 a 18:30hs</li>
             <li>Envíos a todo el país</li>
           </ul>
         </div>

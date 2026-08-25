@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "TradeInRequest" ALTER COLUMN "fullName" DROP NOT NULL,
+ALTER COLUMN "phone" DROP NOT NULL;

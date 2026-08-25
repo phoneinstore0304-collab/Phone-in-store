@@ -38,6 +38,7 @@ model User {
   createdAt   DateTime            @default(now())
   orders      Order[]
   pointsLog   PointsTransaction[]
+  tradeInRequests TradeInRequest[]
 }
 
 model Category {
@@ -130,6 +131,87 @@ model PointsTransaction {
   amount    Int
   type      String // EARNED / REDEEMED
   orderId   String?
+  createdAt DateTime @default(now())
+}
+
+// Plan Canje: alguien ofrece su celular usado como parte de pago. Esto es
+// un pedido de cotización (la valuación la hace un humano, no hay lógica
+// de precios automática todavía) — el admin lo revisa desde /admin/plan-canje
+// y contacta al cliente por fuera del sitio.
+// Tabla de precios base del cotizador (USD), cargada a mano por el admin a
+// medida que se van definiendo valores — ver /admin/plan-canje/precios.
+// Si un pedido no encuentra un precio acá para su model+storageGb, queda
+// sin cotización automática (TradeInRequest.quotedPriceUsd = null) y se
+// cotiza a mano.
+model TradeInModelPrice {
+  id           String @id @default(cuid())
+  model        String
+  storageGb    Int
+  basePriceUsd Int
+
+  @@unique([model, storageGb])
+}
+
+// Plan Canje: alguien ofrece su celular usado como parte de pago. El precio
+// se calcula automáticamente a partir de TradeInModelPrice + los ajustes de
+// src/lib/trade-in-pricing.ts (batería, caja, detalles estéticos, etc). Si
+// tiene alguna rotura o algo no funciona bien, no se cotiza solo: queda
+// marcado con needsInPersonReview y lo evalúa un técnico en persona.
+model TradeInRequest {
+  id     String  @id @default(cuid())
+  // Nullable: no hace falta estar logueado para pedir una cotización.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Todos opcionales: se pide la cotización sin dejar datos de contacto si
+  // el usuario no quiere — sin al menos uno no lo podemos contactar después,
+  // pero eso no bloquea ver el número.
+  fullName String?
+  phone    String?
+  email    String?
+
+  model         String
+  storageGb     Int
+  batteryHealth Int
+
+  hasOriginalBox Boolean
+
+  // Detalles puramente estéticos (no roturas): cualquiera de estos que sea
+  // true resta un monto fijo una sola vez (no se acumulan entre sí).
+  hasFrameDetail  Boolean // marco abollado o rayado
+  hasBackDetail   Boolean // tapa trasera con rayones o manchas
+  hasCameraSmudge Boolean // manchas en el vidrio de la cámara (no roto)
+  hasScreenScratch Boolean // rayón leve de pantalla (no rotura)
+  cosmeticNotes   String?
+
+  hasRepairs    Boolean // reparación o cambio de algún componente
+  repairsDetail String?
+  hasWarranty   Boolean
+  boughtNew     Boolean // no afecta el precio, solo informativo
+
+  // Cualquiera de estos dos manda el pedido a revisión en persona en vez de
+  // cotización automática: roturas de vidrio/pantalla, o algo que no
+  // funciona / funciona mal (incluye problemas de la cámara en sí).
+  hasBreakage         Boolean
+  breakageDetail      String?
+  hasFunctionalIssues Boolean
+  functionalIssuesDetail String?
+
+  notes String?
+
+  // Snapshot del resultado calculado al momento de crear el pedido (ver
+  // calculateTradeInQuote) — no se recalcula después aunque cambien los
+  // precios base, para que el admin vea exactamente lo que se le mostró al
+  // cliente.
+  quotedPriceUsd      Int?
+  needsInPersonReview Boolean @default(false)
+
+  // Prueba de que aceptó el disclaimer (cotización estimada, no vinculante,
+  // sujeta a inspección física) antes de ver el número — se exige en el
+  // formulario con un popup y no se puede armar el pedido sin esto.
+  acceptedTermsAt DateTime
+
+  status    String   @default("pending") // pending / contacted / closed
   createdAt DateTime @default(now())
 }
 

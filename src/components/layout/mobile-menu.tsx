@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
 const links = [
   { href: "/", label: "Inicio" },
   { href: "/#catalogo", label: "Catálogo" },
+  { href: "/plan-canje", label: "Plan Canje" },
   { href: "/#contacto", label: "Envíos" },
   { href: "/#contacto", label: "Contacto" },
 ];
@@ -28,36 +30,43 @@ export function MobileMenu() {
         <Menu className="size-5" />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button
-            type="button"
-            aria-label="Cerrar menú"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/55 animate-in fade-in duration-200"
-          />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-in slide-in-from-left flex-col bg-background p-5 duration-200">
-            <div className="mb-6 flex items-center justify-between">
-              <span className="text-sm font-bold tracking-widest uppercase">Menú</span>
-              <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)}>
-                <X className="size-5" />
-              </button>
-            </div>
-            <nav className="flex flex-col">
-              {links.map((link, index) => (
-                <Link
-                  key={link.label + index}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="border-b border-border py-3.5 text-base font-semibold text-foreground"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </aside>
-        </div>
-      )}
+      {/* Portal a document.body: el header tiene backdrop-blur, y eso
+      convierte al header en el "containing block" de cualquier hijo
+      position:fixed (mismo comportamiento que transform/filter) — el
+      overlay quedaba encajonado dentro de la altura del header en vez de
+      cubrir toda la pantalla. Renderizando afuera del header se evita eso. */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 md:hidden">
+            <button
+              type="button"
+              aria-label="Cerrar menú"
+              onClick={() => setOpen(false)}
+              className="absolute inset-0 bg-black/55 animate-in fade-in duration-200"
+            />
+            <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] animate-in slide-in-from-left flex-col bg-background p-5 duration-200">
+              <div className="mb-6 flex items-center justify-between">
+                <span className="text-sm font-bold tracking-widest uppercase">Menú</span>
+                <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)}>
+                  <X className="size-5" />
+                </button>
+              </div>
+              <nav className="flex flex-col">
+                {links.map((link, index) => (
+                  <Link
+                    key={link.label + index}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="border-b border-border py-3.5 text-base font-semibold text-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </aside>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

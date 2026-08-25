@@ -14,6 +14,7 @@ import { getCurrentUser } from "@/lib/auth";
 const navLinks = [
   { href: "/", label: "Inicio" },
   { href: "/#catalogo", label: "Catálogo" },
+  { href: "/plan-canje", label: "Plan Canje" },
   { href: "/#contacto", label: "Envíos" },
   { href: "/#contacto", label: "Contacto" },
 ];

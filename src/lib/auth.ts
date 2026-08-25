@@ -36,6 +36,17 @@ export async function getCurrentUser() {
   return prisma.user.create({ data: { clerkId: userId, email, name } });
 }
 
+// Cualquier usuario logueado (no necesariamente admin) — para el checkout,
+// donde hace falta un userId real para crear el Order pero no hace falta
+// ningún rol especial.
+export async function requireUser() {
+  await auth.protect();
+
+  const user = await getCurrentUser();
+  if (!user) redirect("/");
+  return user;
+}
+
 // El rol de admin se valida siempre acá, contra la tabla User, nunca solo
 // en el cliente. Si no es admin, redirige en vez de mostrar el panel.
 //

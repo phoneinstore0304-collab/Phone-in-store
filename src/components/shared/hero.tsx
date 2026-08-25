@@ -3,22 +3,21 @@ import { Truck } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-border px-6 py-14 sm:px-10 sm:py-20">
+    <section className="relative overflow-hidden border-b border-border px-6 pt-5 pb-11 sm:px-10 sm:pt-8 sm:pb-16">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(circle,rgba(19,19,21,0.14)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_70%_60%_at_70%_30%,black_40%,transparent_90%)]"
       />
-      <div className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.45fr_0.55fr]">
         <div>
           <p className="text-[11px] font-bold tracking-[0.18em] text-primary uppercase">
-            Tienda física y online · CABA
+            Tienda física y online · MARTINEZ BS. AS.
           </p>
           <h1 className="mt-3.5 text-[clamp(34px,5vw,58px)] leading-[1.04] font-black tracking-tight text-foreground font-display">
-            Tecnología original,{" "}
+            Toda la tecnología,{" "}
             <span className="bg-gradient-to-br from-[#ff8a4c] via-primary to-[#9c1c2e] bg-clip-text text-transparent">
-              al mejor precio
+              en un solo lugar
             </span>{" "}
-            del barrio.
           </h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-zinc-500">
             iPhone, Mac, notebooks, audio JBL y accesorios — con la garantía y
