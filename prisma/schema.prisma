@@ -101,6 +101,12 @@ model Order {
   status       String // pending / paid / cancelled
   mpPaymentId  String?
   shippingInfo Json?
+  // Se graba en el momento de la compra (ver checkout/actions.ts), no se
+  // infiere de si el User tiene clerkId — ese dato puede cambiar después
+  // (ej: alguien compra de invitado con un email que ya tenía cuenta, o se
+  // registra más adelante) y usarlo para decidir el acceso a /pedido/[id]
+  // dejaba afuera a gente que pagó de invitado. Ver pedido/[id]/page.tsx.
+  guestCheckout Boolean    @default(false)
   createdAt    DateTime    @default(now())
 }
 

@@ -23,18 +23,21 @@ export default async function OrderStatusPage({
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { items: { include: { product: true } }, user: true },
+    include: { items: { include: { product: true } } },
   });
   if (!order) notFound();
 
-  // Los pedidos de invitado (sin cuenta, ver checkout/actions.ts) se
-  // pueden ver con solo el link — el id es un cuid no adivinable, y es la
-  // única forma que tiene un invitado de consultar su pedido. Los de una
-  // cuenta registrada sí exigen estar logueado como ese mismo usuario, para
-  // no dejar ver el historial de otra persona si alguien adivina/edita el
-  // id en la URL.
-  const isGuestOrder = order.user.clerkId === null;
-  if (!isGuestOrder && (!user || order.userId !== user.id)) notFound();
+  // Los pedidos de invitado (ver checkout/actions.ts) se pueden ver con
+  // solo el link — el id es un cuid no adivinable, y es la única forma que
+  // tiene un invitado de consultar su pedido. Importante: esto se decide
+  // por order.guestCheckout (grabado en el momento de la compra), NO por
+  // si el User tiene clerkId — si alguien compra de invitado con un email
+  // que ya tenía cuenta registrada, el pedido se vincula a esa cuenta pero
+  // sigue siendo un pedido de invitado, y tiene que poder verlo sin login.
+  // Los pedidos hechos con sesión sí exigen estar logueado como ese mismo
+  // usuario, para no dejar ver el historial de otra persona si alguien
+  // adivina/edita el id en la URL.
+  if (!order.guestCheckout && (!user || order.userId !== user.id)) notFound();
 
   const info = statusInfo[order.status as keyof typeof statusInfo] ?? statusInfo.pending;
   const Icon = info.icon;

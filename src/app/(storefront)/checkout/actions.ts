@@ -24,6 +24,12 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
   // (o se crea) el cliente por el email que dejó en el formulario — mismo
   // mecanismo que un cliente cargado a mano desde /admin/usuarios.
   let user = await getCurrentUser();
+  // Se graba en el pedido (no se infiere después del user.clerkId): si el
+  // email del invitado coincide con una cuenta ya registrada, el pedido
+  // queda igual vinculado a esa cuenta, pero sigue siendo visible por el
+  // link sin pedir login — la persona pagó sin iniciar sesión, y así tiene
+  // que poder ver su propio pedido al volver desde Mercado Pago.
+  const isGuestCheckout = !user;
   if (!user) {
     if (!email) {
       return { error: "Dejanos tu email para poder avisarte sobre tu pedido." };
@@ -71,6 +77,7 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
         total,
         status: "pending",
         shippingInfo,
+        guestCheckout: isGuestCheckout,
         items: {
           create: orderLines.map((line) => ({
             productId: line.productId,
