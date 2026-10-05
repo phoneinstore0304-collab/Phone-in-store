@@ -1,12 +1,13 @@
 import { z } from "zod";
 
+// Por ahora el checkout solo soporta retiro en el local — el envío a
+// domicilio se agrega más adelante. `method` queda igual guardado para que,
+// cuando se sume el envío, los pedidos viejos se puedan distinguir sin
+// tener que migrar nada.
 export const shippingInfoSchema = z.object({
+  method: z.literal("pickup"),
   fullName: z.string().trim().min(1, "El nombre es obligatorio"),
   phone: z.string().trim().min(1, "El teléfono es obligatorio"),
-  address: z.string().trim().min(1, "La dirección es obligatoria"),
-  city: z.string().trim().min(1, "La ciudad es obligatoria"),
-  province: z.string().trim().min(1, "La provincia es obligatoria"),
-  postalCode: z.string().trim().min(1, "El código postal es obligatorio"),
   notes: z.string().trim().optional(),
 });
 
@@ -24,4 +25,7 @@ export const checkoutItemSchema = z.object({
 export const checkoutSchema = z.object({
   items: z.array(checkoutItemSchema).min(1, "El carrito está vacío"),
   shippingInfo: shippingInfoSchema,
+  // Solo hace falta si no hay sesión iniciada — createOrder exige esto a
+  // mano para el caso de invitado, en vez de requerirlo siempre acá.
+  email: z.string().trim().email("Email inválido").optional().or(z.literal("")),
 });

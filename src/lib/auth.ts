@@ -36,15 +36,16 @@ export async function getCurrentUser() {
   return prisma.user.create({ data: { clerkId: userId, email, name } });
 }
 
-// Cualquier usuario logueado (no necesariamente admin) — para el checkout,
-// donde hace falta un userId real para crear el Order pero no hace falta
-// ningún rol especial.
-export async function requireUser() {
-  await auth.protect();
+// Checkout sin cuenta: busca un User por email, o lo crea con clerkId null
+// (mismo caso que un cliente cargado a mano desde /admin/usuarios — ver
+// getCurrentUser). Si esta persona se registra de verdad más adelante con
+// el mismo email, getCurrentUser() reclama esta fila sola y no pierde el
+// historial de pedidos.
+export async function getOrCreateGuestUser(email: string, name?: string | null) {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return existing;
 
-  const user = await getCurrentUser();
-  if (!user) redirect("/");
-  return user;
+  return prisma.user.create({ data: { email, name: name || null } });
 }
 
 // El rol de admin se valida siempre acá, contra la tabla User, nunca solo

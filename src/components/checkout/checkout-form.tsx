@@ -6,25 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/format";
+import { siteConfig } from "@/config/site";
 import { useCartStore, cartTotal } from "@/lib/store/cart-store";
 import { createOrder } from "@/app/(storefront)/checkout/actions";
 import type { ShippingInfo } from "@/lib/validations/checkout";
 
 const emptyShipping: ShippingInfo = {
+  method: "pickup",
   fullName: "",
   phone: "",
-  address: "",
-  city: "",
-  province: "",
-  postalCode: "",
   notes: "",
 };
 
-export function CheckoutForm() {
+export function CheckoutForm({ initialEmail }: { initialEmail?: string }) {
   const items = useCartStore((state) => state.items);
   const [shipping, setShipping] = useState<ShippingInfo>(emptyShipping);
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Si hay sesión, initialEmail viene con el email de la cuenta y no hace
+  // falta pedirlo de nuevo — si no, es invitado y lo tiene que escribir.
+  const isLoggedIn = Boolean(initialEmail);
 
   if (items.length === 0) {
     return (
@@ -49,6 +52,7 @@ export function CheckoutForm() {
     const result = await createOrder({
       items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
       shippingInfo: shipping,
+      email,
     });
 
     if ("error" in result) {
@@ -64,7 +68,14 @@ export function CheckoutForm() {
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <h2 className="font-display text-lg font-bold text-zinc-900">Datos de envío</h2>
+        <h2 className="font-display text-lg font-bold text-zinc-900">Retiro en el local</h2>
+
+        {/* Por ahora el checkout solo soporta retiro en el local — ver
+        shippingInfoSchema. El envío a domicilio se suma más adelante. */}
+        <div className="rounded-lg border border-border bg-muted/40 px-3.5 py-3 text-sm text-zinc-600">
+          <p className="font-medium text-zinc-800">{siteConfig.storeAddress}</p>
+          <p>{siteConfig.storeHours}</p>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="fullName">Nombre y apellido</Label>
@@ -74,6 +85,24 @@ export function CheckoutForm() {
             onChange={(event) => updateField("fullName", event.target.value)}
             required
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email">Email</Label>
+          {isLoggedIn ? (
+            // Ya lo sabemos por la cuenta logueada — se muestra pero no se
+            // vuelve a pedir ni se puede editar acá.
+            <Input id="email" value={email} disabled className="text-zinc-500" />
+          ) : (
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="tu@email.com"
+              required
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -88,49 +117,7 @@ export function CheckoutForm() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="address">Dirección (calle, altura, depto)</Label>
-          <Input
-            id="address"
-            value={shipping.address}
-            onChange={(event) => updateField("address", event.target.value)}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="city">Ciudad</Label>
-            <Input
-              id="city"
-              value={shipping.city}
-              onChange={(event) => updateField("city", event.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="province">Provincia</Label>
-            <Input
-              id="province"
-              value={shipping.province}
-              onChange={(event) => updateField("province", event.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="postalCode">Código postal</Label>
-          <Input
-            id="postalCode"
-            value={shipping.postalCode}
-            onChange={(event) => updateField("postalCode", event.target.value)}
-            className="max-w-32"
-            required
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="notes">Referencias (opcional)</Label>
+          <Label htmlFor="notes">Algo que quieras avisarnos (opcional)</Label>
           <textarea
             id="notes"
             value={shipping.notes}

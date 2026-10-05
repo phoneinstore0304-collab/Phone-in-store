@@ -74,8 +74,8 @@ export function SiteFooter() {
                 11 5338-1052
               </a>
             </li>
-            <li>Av. Alvear 182, Martinez Bs. As.</li>
-            <li>Lun a Sáb · 10 a 12:30hs - 15 a 18:30hs</li>
+            <li>{siteConfig.storeAddress}</li>
+            <li>{siteConfig.storeHours}</li>
             <li>Envíos a todo el país</li>
           </ul>
         </div>

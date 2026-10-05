@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CircleCheck, Clock, CircleX } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { formatPrice } from "@/lib/format";
+import { siteConfig } from "@/config/site";
 
 const statusInfo = {
   paid: { icon: CircleCheck, color: "text-emerald-600", label: "¡Pago aprobado!" },
@@ -18,16 +19,22 @@ export default async function OrderStatusPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true } }, user: true },
   });
+  if (!order) notFound();
 
-  // No dejamos ver pedidos ajenos solo porque alguien adivine/edite el id
-  // en la URL de vuelta de Mercado Pago.
-  if (!order || order.userId !== user.id) notFound();
+  // Los pedidos de invitado (sin cuenta, ver checkout/actions.ts) se
+  // pueden ver con solo el link — el id es un cuid no adivinable, y es la
+  // única forma que tiene un invitado de consultar su pedido. Los de una
+  // cuenta registrada sí exigen estar logueado como ese mismo usuario, para
+  // no dejar ver el historial de otra persona si alguien adivina/edita el
+  // id en la URL.
+  const isGuestOrder = order.user.clerkId === null;
+  if (!isGuestOrder && (!user || order.userId !== user.id)) notFound();
 
   const info = statusInfo[order.status as keyof typeof statusInfo] ?? statusInfo.pending;
   const Icon = info.icon;
@@ -60,6 +67,20 @@ export default async function OrderStatusPage({
           <span>Total</span>
           <span className="text-primary">{formatPrice(order.total.toString())}</span>
         </div>
+      </div>
+
+      {/* El checkout por ahora solo tiene retiro en el local — ver
+      shippingInfoSchema. Cuando se sume envío, acá hay que leer
+      shippingInfo.method para mostrar lo que corresponda. */}
+      <div className="w-full rounded-2xl border border-border bg-muted/40 p-5 text-left text-sm text-zinc-600">
+        <p className="mb-1 font-bold text-zinc-900">Retirás en el local</p>
+        <p className="font-medium text-zinc-800">{siteConfig.storeAddress}</p>
+        <p>{siteConfig.storeHours}</p>
+        {order.status === "paid" && (
+          <p className="mt-2 text-emerald-700">
+            Ya podés pasar a retirarlo en el horario de atención.
+          </p>
+        )}
       </div>
 
       <Link href="/" className={buttonVariants()}>

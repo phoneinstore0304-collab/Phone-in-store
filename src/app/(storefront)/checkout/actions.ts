@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser, getOrCreateGuestUser } from "@/lib/auth";
 import { checkoutSchema, type ShippingInfo } from "@/lib/validations/checkout";
 import { createCheckoutPreference } from "@/lib/payments/mercadopago";
 
@@ -10,16 +10,26 @@ export type CreateOrderResult = { error: string } | { url: string };
 type CheckoutInput = {
   items: { productId: string; quantity: number }[];
   shippingInfo: ShippingInfo;
+  email?: string;
 };
 
 export async function createOrder(input: CheckoutInput): Promise<CreateOrderResult> {
-  const user = await requireUser();
-
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
-  const { items, shippingInfo } = parsed.data;
+  const { items, shippingInfo, email } = parsed.data;
+
+  // No hace falta estar logueado para comprar: si no hay sesión, se busca
+  // (o se crea) el cliente por el email que dejó en el formulario — mismo
+  // mecanismo que un cliente cargado a mano desde /admin/usuarios.
+  let user = await getCurrentUser();
+  if (!user) {
+    if (!email) {
+      return { error: "Dejanos tu email para poder avisarte sobre tu pedido." };
+    }
+    user = await getOrCreateGuestUser(email, shippingInfo.fullName);
+  }
 
   const products = await prisma.product.findMany({
     where: { id: { in: items.map((i) => i.productId) } },

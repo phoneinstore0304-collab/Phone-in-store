@@ -31,7 +31,6 @@ export async function createCheckoutPreference(order: {
   items: PreferenceItem[];
   payerEmail?: string;
 }) {
-  const accessToken = getAccessToken();
   const client = getClient();
   const preference = new Preference(client);
   const baseUrl = getSiteUrl();
@@ -56,8 +55,13 @@ export async function createCheckoutPreference(order: {
     },
   });
 
-  const isTestCredential = accessToken.startsWith("TEST-");
-  const url = isTestCredential ? response.sandbox_init_point : response.init_point;
+  // No conviene adivinar test/producción por el prefijo del access token
+  // (en algunas cuentas las credenciales de prueba también empiezan con
+  // "APP_USR-", no con "TEST-" — lo vimos en la propia cuenta del
+  // proyecto). Mercado Pago solo devuelve sandbox_init_point cuando la
+  // preferencia se creó en modo de prueba, así que usamos eso como señal
+  // en vez del formato del token.
+  const url = response.sandbox_init_point ?? response.init_point;
   if (!url) throw new Error("Mercado Pago no devolvió una URL de pago.");
   return url;
 }
