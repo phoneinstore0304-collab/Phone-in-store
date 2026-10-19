@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Tag, Megaphone, Users, Store, Repeat } from "lucide-react";
+import { Package, Tag, Megaphone, Users, Store, Repeat, Receipt } from "lucide-react";
 
 const links = [
+  { href: "/admin/pedidos", label: "Pedidos", icon: Receipt },
   { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/categorias", label: "Categorías", icon: Tag },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
