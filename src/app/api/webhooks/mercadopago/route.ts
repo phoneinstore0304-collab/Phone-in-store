@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // (Mercado Pago reintentaría de nuevo sin necesidad).
     try {
       await sendOrderPaidEmail({
-        id: order.id,
+        orderNumber: order.orderNumber,
         to: order.user.email,
         items: order.items.map((item) => ({
           name: item.product.name,

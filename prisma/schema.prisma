@@ -94,11 +94,19 @@ model Promotion {
 
 model Order {
   id           String      @id @default(cuid())
+  // Número corto y secuencial para que el cliente y el admin puedan
+  // identificar el pedido a simple vista (se manda en el email de
+  // comprobante) — el id es un cuid largo, no sirve para eso.
+  orderNumber  Int         @unique @default(autoincrement())
   userId       String
   user         User        @relation(fields: [userId], references: [id])
   items        OrderItem[]
   total        Decimal
   status       String // pending / paid / cancelled
+  // Solo tiene sentido cuando status = "paid" — ver /admin/pedidos (tablero
+  // tipo Kanban). pending acá = pagado pero todavía no se despachó/retiró,
+  // no confundir con status "pending" (que es "todavía no pagó").
+  fulfillmentStatus String @default("pending") // pending / shipped / delivered
   mpPaymentId  String?
   shippingInfo Json?
   // Se graba en el momento de la compra (ver checkout/actions.ts), no se

@@ -1,13 +1,22 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/admin/delete-button";
 import { formatPrice } from "@/lib/format";
 import type { ShippingInfo } from "@/lib/validations/checkout";
+import { updateFulfillmentStatus, deleteOrder } from "../actions";
 
 const statusLabel: Record<string, { label: string; variant: "secondary" | "default" | "outline" }> = {
   pending: { label: "Pendiente", variant: "secondary" },
   paid: { label: "Pagado", variant: "default" },
   cancelled: { label: "Cancelado", variant: "outline" },
+};
+
+const fulfillmentLabel: Record<string, string> = {
+  pending: "Pagado (sin gestionar)",
+  shipped: "Enviado",
+  delivered: "Entregado",
 };
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -41,9 +50,12 @@ export default async function AdminOrderDetailPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-zinc-900">
-          Pedido de {order.user.name ?? order.user.email}
+          Pedido #{order.orderNumber} — {order.user.name ?? order.user.email}
         </h1>
-        <Badge variant={status.variant}>{status.label}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant={status.variant}>{status.label}</Badge>
+          <DeleteButton action={deleteOrder.bind(null, order.id)} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5">
@@ -74,6 +86,31 @@ export default async function AdminOrderDetailPage({
           </div>
         </div>
       </div>
+
+      {order.status === "paid" && (
+        <form
+          action={async (formData) => {
+            "use server";
+            await updateFulfillmentStatus(order.id, String(formData.get("fulfillmentStatus")));
+          }}
+          className="flex items-center gap-3"
+        >
+          <select
+            name="fulfillmentStatus"
+            defaultValue={order.fulfillmentStatus}
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {Object.entries(fulfillmentLabel).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" size="sm">
+            Actualizar estado
+          </Button>
+        </form>
+      )}
     </div>
   );
 }

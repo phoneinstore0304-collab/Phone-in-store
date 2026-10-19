@@ -47,9 +47,15 @@ export default async function OrderStatusPage({
       <Icon className={`size-14 ${info.color}`} />
       <div className="flex flex-col gap-1.5">
         <h1 className="font-display text-2xl font-bold text-zinc-900">{info.label}</h1>
+        <p className="text-xs text-zinc-400">Pedido #{order.orderNumber}</p>
         {order.status === "pending" && (
           <p className="text-sm text-zinc-500">
             Si ya pagaste, puede tardar unos segundos en confirmarse acá — actualizá la página.
+          </p>
+        )}
+        {order.status === "paid" && (
+          <p className="text-sm text-zinc-500">
+            Te mandamos el comprobante por email — si no lo ves en unos minutos, revisá spam.
           </p>
         )}
       </div>

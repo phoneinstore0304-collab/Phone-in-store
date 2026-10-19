@@ -23,7 +23,7 @@ function getTransport() {
 export type OrderEmailItem = { name: string; price: number; quantity: number };
 
 export async function sendOrderPaidEmail(order: {
-  id: string;
+  orderNumber: number;
   to: string;
   items: OrderEmailItem[];
   total: number;
@@ -44,7 +44,10 @@ export async function sendOrderPaidEmail(order: {
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#18181b;">
       <h1 style="font-size:20px;">¡Gracias por tu compra!</h1>
-      <p style="color:#52525b;">Tu pago fue aprobado. Acá está el resumen de tu pedido:</p>
+      <p style="color:#52525b;">
+        Tu pago fue aprobado. Pedido <strong>#${order.orderNumber}</strong> — guardá este número
+        para identificarlo.
+      </p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
         ${itemsHtml}
         <tr>
@@ -63,7 +66,7 @@ export async function sendOrderPaidEmail(order: {
   await transport.sendMail({
     from: `"${siteConfig.name}" <${from}>`,
     to: order.to,
-    subject: `Pedido confirmado — ${siteConfig.name}`,
+    subject: `Pedido #${order.orderNumber} confirmado — ${siteConfig.name}`,
     html,
   });
 }
