@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { WebhookSignatureValidator } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 import { getPayment } from "@/lib/payments/mercadopago";
+import { sendOrderPaidEmail } from "@/lib/email";
 
 // Confirma pagos de Mercado Pago y actualiza el pedido correspondiente.
 // Nunca hay que confiar en el body de la notificación tal cual llega (lo
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true } }, user: true },
   });
   if (!order) return NextResponse.json({ received: true });
 
@@ -68,6 +69,25 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // El comprobante es un "nice to have", no algo de lo que dependa
+    // confirmar el pedido — si falla el envío (ej: credenciales de Gmail
+    // mal cargadas), no hay que romper la respuesta al webhook por eso
+    // (Mercado Pago reintentaría de nuevo sin necesidad).
+    try {
+      await sendOrderPaidEmail({
+        id: order.id,
+        to: order.user.email,
+        items: order.items.map((item) => ({
+          name: item.product.name,
+          price: Number(item.price),
+          quantity: item.quantity,
+        })),
+        total: Number(order.total),
+      });
+    } catch (error) {
+      console.error("No se pudo mandar el email de comprobante:", error);
+    }
   } else if (payment.status === "rejected" || payment.status === "cancelled") {
     await prisma.$transaction(async (tx) => {
       await tx.order.update({

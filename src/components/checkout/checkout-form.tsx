@@ -20,6 +20,7 @@ const emptyShipping: ShippingInfo = {
 
 export function CheckoutForm({ initialEmail }: { initialEmail?: string }) {
   const items = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clear);
   const [shipping, setShipping] = useState<ShippingInfo>(emptyShipping);
   const [email, setEmail] = useState(initialEmail ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +61,12 @@ export function CheckoutForm({ initialEmail }: { initialEmail?: string }) {
       setSubmitting(false);
       return;
     }
+
+    // El pedido ya quedó creado en la base en este punto (con stock
+    // reservado) independientemente de si el pago se termina de hacer o
+    // no, así que el carrito se vacía acá — no tendría sentido que sigan
+    // apareciendo esos mismos productos para comprar de nuevo.
+    clearCart();
 
     // Mercado Pago es un dominio externo — no un <Link> de Next.
     window.location.href = result.url;
