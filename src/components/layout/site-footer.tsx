@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { siteConfig } from "@/config/site";
 
 // Ícono de WhatsApp: no es un ícono genérico de lucide-react (esa librería
@@ -77,6 +78,31 @@ export function SiteFooter() {
             <li>{siteConfig.storeAddress}</li>
             <li>{siteConfig.storeHours}</li>
             <li>Envíos a todo el país</li>
+          </ul>
+        </div>
+        {/* "Botón de Arrepentimiento" va con ese texto exacto a propósito
+        — lo exige la Resolución 424/2020, tiene que estar visible en la
+        home sin necesidad de iniciar sesión ni completar pasos de más. */}
+        <div>
+          <h4 className="mb-4 text-[12px] font-bold tracking-[0.1em] text-white/45 uppercase">
+            Legales
+          </h4>
+          <ul className="flex flex-col gap-2.5 text-[13px] text-white/75">
+            <li>
+              <Link href="/arrepentimiento" className="hover:text-white">
+                Botón de Arrepentimiento
+              </Link>
+            </li>
+            <li>
+              <Link href="/terminos" className="hover:text-white">
+                Términos y condiciones
+              </Link>
+            </li>
+            <li>
+              <Link href="/privacidad" className="hover:text-white">
+                Política de privacidad
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

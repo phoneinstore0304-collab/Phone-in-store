@@ -229,6 +229,26 @@ model TradeInRequest {
   createdAt DateTime @default(now())
 }
 
+// Botón de Arrepentimiento (Resolución 424/2020) — pedido de revocación de
+// compra. Los datos pedidos son los que exige la norma: documento del
+// consumidor, código de la operación, fecha, monto y producto. El motivo
+// es opcional a propósito: el derecho de arrepentimiento es "sin
+// necesidad de expresar causa" (Art. 34, Ley 24.240).
+model WithdrawalRequest {
+  id              String   @id @default(cuid())
+  documentType    String // DNI / Pasaporte / etc.
+  documentNumber  String
+  orderCode       String // código/número de la operación que da el comprador
+  purchaseDate    DateTime
+  amount          Decimal
+  productOrService String
+  reason          String?
+  contactEmail    String
+  contactPhone    String?
+  status          String   @default("pending") // pending / resolved
+  createdAt       DateTime @default(now())
+}
+
 model AdminAuditLog {
   id         String   @id @default(cuid())
   adminId    String

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Tag, Megaphone, Users, Store, Repeat, Receipt } from "lucide-react";
+import { Package, Tag, Megaphone, Users, Store, Repeat, Receipt, Undo2 } from "lucide-react";
 
 const links = [
   { href: "/admin/pedidos", label: "Pedidos", icon: Receipt },
@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/categorias", label: "Categorías", icon: Tag },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
   { href: "/admin/plan-canje", label: "Plan Canje", icon: Repeat },
+  { href: "/admin/arrepentimientos", label: "Arrepentimientos", icon: Undo2 },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
 ];
 
