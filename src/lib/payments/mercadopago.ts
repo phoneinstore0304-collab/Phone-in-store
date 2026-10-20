@@ -55,13 +55,14 @@ export async function createCheckoutPreference(order: {
     },
   });
 
-  // No conviene adivinar test/producción por el prefijo del access token
-  // (en algunas cuentas las credenciales de prueba también empiezan con
-  // "APP_USR-", no con "TEST-" — lo vimos en la propia cuenta del
-  // proyecto). Mercado Pago solo devuelve sandbox_init_point cuando la
-  // preferencia se creó en modo de prueba, así que usamos eso como señal
-  // en vez del formato del token.
-  const url = response.sandbox_init_point ?? response.init_point;
+  // Ni el prefijo del access token ni qué campos vengan en la respuesta
+  // sirven para saber si estamos en modo prueba: ya vimos credenciales de
+  // test con prefijo "APP_USR-" (no "TEST-"), y con la cuenta real de
+  // producción la API devolvió igual tanto init_point como
+  // sandbox_init_point los dos juntos. La única señal confiable es que lo
+  // digamos nosotros a propósito con MP_USE_SANDBOX.
+  const useSandbox = process.env.MP_USE_SANDBOX === "true";
+  const url = useSandbox ? response.sandbox_init_point : response.init_point;
   if (!url) throw new Error("Mercado Pago no devolvió una URL de pago.");
   return url;
 }
